@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- Prevents zooming to maintain native app feel -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- PWA Meta Tags (Tells iOS/Android to run as a full-screen app) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Moto Costs">
+    <meta name="theme-color" content="#1e293b">
+    
+    <title>Motorcycle Trip Cost Calculator</title>
+
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+            --accent: #3b82f6;
+            --border: #334155;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            /* Handles the notch area on modern iPhones */
+            padding-top: env(safe-area-inset-top, 30px);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .container { max-width: 500px; margin: 0 auto; padding-bottom: 40px; }
+        h2 { text-align: center; margin-top: 10px; font-weight: 600; margin-bottom: 24px; }
+        
+        .dashboard {
+            background: var(--card); border-radius: 16px; padding: 20px; 
+            text-align: center; margin-bottom: 24px; border: 1px solid var(--border);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .total { font-size: 2.8rem; font-weight: 700; color: var(--accent); margin: 10px 0; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px;}
+        .stat { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 10px; }
+        .stat-label { font-size: 0.85rem; color: #94a3b8; margin-bottom: 4px; display: block; }
+        .stat-val { font-size: 1.2rem; font-weight: 600; }
+        
+        .slider-group { background: var(--card); padding: 16px; border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border); }
+        .slider-header { display: flex; justify-content: space-between; margin-bottom: 12px; font-weight: 500;}
+        input[type="range"] { width: 100%; accent-color: var(--accent); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Trip Budget</h2>
+    
+    <!-- Results Dashboard -->
+    <div class="dashboard">
+        <span class="stat-label">Total Estimated Cost</span>
+        <div class="total" id="out-total">£0</div>
+        <div class="grid">
+            <div class="stat"><span class="stat-label">Fuel</span><span class="stat-val" id="out-fuel">£0</span></div>
+            <div class="stat"><span class="stat-label">Accommodation</span><span class="stat-val" id="out-hotel">£0</span></div>
+            <div class="stat"><span class="stat-label">Food & Drink</span><span class="stat-val" id="out-food">£0</span></div>
+            <div class="stat"><span class="stat-label">Tolls</span><span class="stat-val" id="out-tolls">£0</span></div>
+        </div>
+    </div>
+
+    <!-- Interactive Controls -->
+    <div class="slider-group">
+        <div class="slider-header"><span>Distance (Miles)</span><span id="val-dist">3500</span></div>
+        <input type="range" id="dist" min="500" max="6000" step="50" value="3500" oninput="calc()">
+    </div>
+    <div class="slider-group">
+        <div class="slider-header"><span>Efficiency (MPG)</span><span id="val-mpg">50</span></div>
+        <input type="range" id="mpg" min="30" max="80" step="1" value="50" oninput="calc()">
+    </div>
+    <div class="slider-group">
+        <div class="slider-header"><span>Fuel (£/Litre)</span><span id="val-fuel">1.80</span></div>
+        <input type="range" id="fuel" min="1.00" max="2.50" step="0.01" value="1.80" oninput="calc()">
+    </div>
+    <div class="slider-group">
+        <div class="slider-header"><span>Duration (Days/Nights)</span><span id="val-days">14</span></div>
+        <input type="range" id="days" min="3" max="30" step="1" value="14" oninput="calc()">
+    </div>
+    <div class="slider-group">
+        <div class="slider-header"><span>Food / Day (£)</span><span id="val-food">70</span></div>
+        <input type="range" id="food" min="20" max="150" step="5" value="70" oninput="calc()">
+    </div>
+    <div class="slider-group">
+        <div class="slider-header"><span>Hotel / Night (£)</span><span id="val-hotel">105</span></div>
+        <input type="range" id="hotel" min="40" max="250" step="5" value="105" oninput="calc()">
+    </div>
+    <div class="slider-group">
+        <div class="slider-header"><span>Tolls & Crossings (£)</span><span id="val-tolls">165</span></div>
+        <input type="range" id="tolls" min="0" max="500" step="5" value="165" oninput="calc()">
+    </div>
+</div>
+
+<script>
+    function fmt(num) { return '£' + num.toFixed(2); }
+    
+    function calc() {
+        // Fetch current slider values
+        let dist = parseFloat(document.getElementById('dist').value);
+        let mpg = parseFloat(document.getElementById('mpg').value);
+        let fuelP = parseFloat(document.getElementById('fuel').value);
+        let days = parseInt(document.getElementById('days').value);
+        let foodP = parseFloat(document.getElementById('food').value);
+        let hotelP = parseFloat(document.getElementById('hotel').value);
+        let tolls = parseFloat(document.getElementById('tolls').value);
+
+        // Update the text next to the sliders
+        document.getElementById('val-dist').innerText = dist;
+        document.getElementById('val-mpg').innerText = mpg;
+        document.getElementById('val-fuel').innerText = fuelP.toFixed(2);
+        document.getElementById('val-days').innerText = days;
+        document.getElementById('val-food').innerText = foodP;
+        document.getElementById('val-hotel').innerText = hotelP;
+        document.getElementById('val-tolls').innerText = tolls;
+
+        // Perform Calculations
+        // Convert UK MPG to Litres: (Distance / MPG) * 4.54609
+        let fuelCost = (dist / mpg) * 4.54609 * fuelP;
+        let foodCost = days * foodP;
+        let hotelCost = days * hotelP;
+        let total = fuelCost + foodCost + hotelCost + tolls;
+
+        // Push calculated values to the dashboard UI
+        document.getElementById('out-total').innerText = fmt(total);
+        document.getElementById('out-fuel').innerText = fmt(fuelCost);
+        document.getElementById('out-food').innerText = fmt(foodCost);
+        document.getElementById('out-hotel').innerText = fmt(hotelCost);
+        document.getElementById('out-tolls').innerText = fmt(tolls);
+    }
+    
+    // Run the calculation immediately on load so the dashboard populates
+    calc();
+</script>
+
+</body>
+</html>
